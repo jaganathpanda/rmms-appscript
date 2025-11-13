@@ -56,16 +56,34 @@ function updateInventorySheet(paddyRecordId, rawDistribution, mode) {
 // ================= INVENTORY FUNCTIONS =====================
 
 // 🔸 Get all inventory records
-function getAllInventory(sheet) {
-  const data = sheet.getDataRange().getValues();
-  const headers = data.shift();
+function getAllInventory() {
+  const inventorySheet = rmmPaddyPurchaseForm.getSheetByName("Inventory");
+  const warehouseSheet = rmmPaddyPurchaseForm.getSheetByName("warehouse");
+  const paddyTypeSheet = rmmPaddyPurchaseForm.getSheetByName("paddyType");
 
-  const records = data.map(row => ({
-    inventoryId: row[0],
-    paddyPurchaseId: row[1],
-    warehouseId: Number(row[2]),
-    paddyTypeId: row[3],
-    bags: Number(row[4])
+  // Get data as objects
+  const inventory = getSheetDataAsObjects(inventorySheet);
+  const warehouses = getSheetDataAsObjects(warehouseSheet);
+  const paddyTypes = getSheetDataAsObjects(paddyTypeSheet);
+
+  // Map warehouses and paddyTypes for quick lookup
+  const warehouseMap = {};
+  warehouses.forEach(w => {
+    warehouseMap[String(w["Warehouse Id"]).trim()] = w["WarehouseName"];
+  });
+
+  const paddyTypeMap = {};
+  paddyTypes.forEach(p => {
+    paddyTypeMap[String(p["paddyTypeId"] || p["PADDYTYPE ID"] || p["Paddy Type Id"]).trim()] = p["Paddy Name"];
+  });
+
+  // Build joined records
+  const records = inventory.map(row => ({
+    inventoryId: row["INVENTORY ID"] || row["Inventory Id"],
+    paddyPurchaseId: row["PADDY PURCHASE ID"] || row["Paddy Purchase Id"],
+    warehouse: warehouseMap[String(row["WAREHOUSE ID"]).trim()] || "Unknown Warehouse",
+    paddyType: paddyTypeMap[String(row["PADDYTYPE ID"]).trim()] || "Unknown Paddy",
+    bags: Number(row["NUMBER OF BAGS"])
   }));
 
   return ContentService.createTextOutput(JSON.stringify(records))
